@@ -12,34 +12,40 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping(path = "api/balance",
-        consumes = {"application/json"},
-        produces = {"application/json"})
+@RequestMapping(path = "api/balance")
 public class BalanceController {
 
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping
+    public ResponseEntity<String> getBalanceByMSISDN(@RequestParam String MSISDN) {
+        System.out.println(MSISDN);
+
+        return ResponseEntity.ok(MSISDN);
+    }
+
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(path = "/update/data")
+    @PutMapping(path = "/update/data")
     public ResponseEntity<String> updateData(@Valid @RequestBody BalanceTransactionRequest body) {
         System.out.println(body);
         return ResponseEntity.ok("updateData");
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(path = "/update/minute")
+    @PutMapping(path = "/update/minute")
     public ResponseEntity<String> updateMinute(@Valid @RequestBody BalanceTransactionRequest body) {
         System.out.println(body);
         return ResponseEntity.ok("updateMinute");
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(path = "/update/sms")
+    @PutMapping(path = "/update/sms")
     public ResponseEntity<String> updateSMS(@Valid @RequestBody BalanceTransactionRequest body) {
         System.out.println(body);
         return ResponseEntity.ok("updateSMS");
     }
 
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(path = "/update/money")
+    @PutMapping(path = "/update/money")
     public ResponseEntity<String> updateMoney(@Valid @RequestBody BalanceTransactionRequest body) {
         System.out.println(body);
         return ResponseEntity.ok("updateMoney");
