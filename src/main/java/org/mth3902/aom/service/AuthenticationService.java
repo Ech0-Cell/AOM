@@ -3,6 +3,8 @@ package org.mth3902.aom.service;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -10,7 +12,12 @@ import java.util.Date;
 @Service
 public class AuthenticationService {
     // Secret key for signing JWT
-    private static final String SECRET_KEY = "j0fg4ItBRmxcOxcOzs1zzsIVuS5lWZoGFZTU8tBRmxcOzs1zPj0fg4IVuS5lWZS5lWZoGOzs1zPj0fgFZTU8tBRmj0fg4zsIVuS5";
+    private final String secretKey;
+
+    @Autowired
+    public AuthenticationService(Environment env) {
+        this.secretKey = env.getProperty("auth.secret");
+    }
 
     // Expiration time for JWT token (in milliseconds)
     private static final long EXPIRATION_TIME = 86400000 * 7; // 1 week
@@ -24,7 +31,7 @@ public class AuthenticationService {
                 .setSubject(msisdn)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS512, SECRET_KEY)
+                .signWith(SignatureAlgorithm.HS512, secretKey)
                 .compact();
     }
 
@@ -33,7 +40,7 @@ public class AuthenticationService {
         try {
 
             Claims body = Jwts.parser()
-                    .setSigningKey(SECRET_KEY)
+                    .setSigningKey(secretKey)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();

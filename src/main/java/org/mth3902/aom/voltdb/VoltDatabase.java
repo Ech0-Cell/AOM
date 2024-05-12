@@ -38,6 +38,11 @@ public class VoltDatabase {
         return client.callProcedure("@AdHoc", "SELECT * FROM CUSTOMER;").getResults()[0];
     }
 
+    // Method to select all rows from CUSTOMER table
+    public VoltTable selectCustomerByMSISDN(String msisdn) throws Exception {
+        return client.callProcedure("@AdHoc", "SELECT * FROM CUSTOMER WHERE MSISDN = ?;", msisdn).getResults()[0];
+    }
+
     // Method to select all rows from BALANCE table
     public VoltTable selectAllBalances() throws Exception {
         return client.callProcedure("@AdHoc", "SELECT * FROM BALANCE;").getResults()[0];
