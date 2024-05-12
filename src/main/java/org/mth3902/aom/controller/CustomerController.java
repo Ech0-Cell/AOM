@@ -13,7 +13,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.voltdb.VoltTable;
+import org.voltdb.VoltTableRow;
 
+import java.sql.SQLOutput;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,21 +26,17 @@ public class CustomerController {
 
     private final AuthenticationService auth;
     private final HashService hash;
-
     private VoltDatabase voltDB;
-    private Environment env;
 
     @Autowired
     public CustomerController(AuthenticationService auth, HashService hash, Environment env) {
         this.auth = auth;
         this.hash = hash;
-        this.env = env;
         try {
             this.voltDB = new VoltDatabase(env.getProperty("voltdb.server.host"));
         } catch (Exception e) {
             System.out.println("error in voltdb" + e);
         }
-
     }
 
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,14 +48,19 @@ public class CustomerController {
         System.out.println(body);
         String hashedPassword = hash.hashPassword(body.getPassword());
 
+        //TODO package_id is missing in voltDB
+        // status in unknown,
+        // customer_id should be auto_increment,
+        // password size should be 60
+
         try {
-            voltDB.insertCustomer(2,
+            voltDB.insertCustomer(1,
                     body.getMsisdn(),
                     body.getName(),
                     body.getSurname(),
                     body.getEmail(),
                     hashedPassword,
-                    body.getPackageID() + "",
+                    "1",
                     body.getSecurityKey());
 
         } catch (Exception e) {
@@ -80,26 +83,36 @@ public class CustomerController {
 
         Map<String, String> responseBody = new HashMap<String, String>();
 
-        //TODO This should come from voltDB
-        String hashedPasswordDB = hash.hashPassword(body.get("password"));;
-        String msisdnDB = body.get("msisdn");
+        try {
+            VoltTable table = voltDB.selectCustomerByMSISDN(body.get("msisdn"));
 
-        if(body.get("msisdn").equals(msisdnDB)) {
-            if(hash.checkPassword(body.get("password"), hashedPasswordDB)) {
-                String token = auth.generateToken(body.get("msisdn"));
+            if(table.advanceRow()) //check if there is customer with such msisdn
+            {
+                VoltTableRow row = table.fetchRow(0);
+                String password = row.getString("password");
+                String msisdn = row.getString("msisdn");
 
-                responseBody.put("token", token);
-                responseBody.put("msisdn", body.get("msisdn"));
+                if(hash.checkPassword(body.get("password"), password))  //check if password is correct
+                {
+                    String token = auth.generateToken(body.get("msisdn"));
 
-                return ResponseEntity.ok(responseBody);
+                    responseBody.put("token", token);
+                    responseBody.put("msisdn", body.get("msisdn"));
+
+                    return ResponseEntity.ok(responseBody);
+                }
             }
+        }
+        catch(Exception e) {
+            System.out.println(e);
+            responseBody.put("error", "failed to connect to voltdb");
+            return ResponseEntity.internalServerError().body(responseBody);
         }
 
         responseBody.put("error", "Wrong msisdn or password.");
         return ResponseEntity.badRequest().body(responseBody);
     }
 
-    //TODO extract validation handler
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Map<String, String> handleValidationExceptions(
