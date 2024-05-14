@@ -45,7 +45,6 @@ public class CustomerController {
             produces = {"application/json"})
     public ResponseEntity<String> register(@Valid @RequestBody Customer body) {
 
-        System.out.println(body);
         String hashedPassword = hash.hashPassword(body.getPassword());
 
         //TODO package_id is missing in voltDB
@@ -54,7 +53,13 @@ public class CustomerController {
         // password size should be 60
 
         try {
-            voltDB.insertCustomer(1,
+            if(voltDB.selectCustomerByMSISDN(body.getMsisdn()).advanceRow()) //check if customer exist
+                return ResponseEntity.badRequest().body("Customer already exists");
+
+            int nextId = voltDB.getNextCustomerId();
+            System.out.println(nextId);
+
+            voltDB.insertCustomer(nextId,
                     body.getMsisdn(),
                     body.getName(),
                     body.getSurname(),

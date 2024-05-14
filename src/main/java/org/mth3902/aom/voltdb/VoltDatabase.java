@@ -53,6 +53,15 @@ public class VoltDatabase {
         return client.callProcedure("@AdHoc", "SELECT b.* FROM BALANCE b JOIN CUSTOMER c ON b.CUST_ID = c.CUST_ID WHERE c.MSISDN = ?;", msisdn).getResults()[0];
     }
 
+    public int getNextCustomerId() throws Exception {
+
+        VoltTable response = client.callProcedure("@AdHoc","SELECT CUST_ID FROM CUSTOMER ORDER BY CUST_ID DESC LIMIT 1;").getResults()[0];
+        if(response.advanceRow())
+            return (int) response.getLong("CUST_ID") + 1;
+
+        throw new Exception("error while getting next customer id");
+    }
+
     // Close the VoltDB client connection
     public void close() throws Exception {
         client.close();
