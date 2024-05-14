@@ -67,7 +67,7 @@ public class BalanceController {
             return ResponseEntity.internalServerError().body("failed to select from voltdb");
         }
 
-        return ResponseEntity.badRequest().body("no balance for this msisdn");
+        return ResponseEntity.badRequest().body("no balance is associated with this customer");
     }
 
     @ResponseStatus(HttpStatus.CREATED)
