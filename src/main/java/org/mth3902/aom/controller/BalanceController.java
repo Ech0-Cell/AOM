@@ -40,8 +40,12 @@ public class BalanceController {
     @GetMapping
     public ResponseEntity getBalanceByMSISDN(@RequestParam String MSISDN, @RequestHeader("Authorization") String token) {
 
-        if(!auth.isValidToken(token, MSISDN))
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid token");
+        Map<String, String> responseBody = new HashMap<String, String>();
+
+        if(!auth.isValidToken(token, MSISDN)) {
+            responseBody.put("message", "invalid token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseBody);
+        }
 
         try {
             VoltTable table = voltDB.selectBalanceByMSISDN(MSISDN);
@@ -64,10 +68,11 @@ public class BalanceController {
             }
         } catch (Exception e) {
             System.out.println(e);
-            return ResponseEntity.internalServerError().body("failed to select from voltdb");
+            responseBody.put("message", "voltdb error");
+            return ResponseEntity.internalServerError().body(responseBody);
         }
-
-        return ResponseEntity.badRequest().body("no balance is associated with this customer");
+        responseBody.put("message", "no balance is associated with this customer");
+        return ResponseEntity.badRequest().body(responseBody);
     }
 
     @ResponseStatus(HttpStatus.CREATED)
@@ -103,6 +108,7 @@ public class BalanceController {
     public Map<String, String> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
+        errors.put("message", "validation error");
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();

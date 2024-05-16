@@ -18,6 +18,7 @@ import org.voltdb.VoltTableRow;
 import java.sql.SQLOutput;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping(path = "api/customer")
@@ -43,18 +44,20 @@ public class CustomerController {
     @PostMapping(path = "/register",
             consumes = {"application/json"},
             produces = {"application/json"})
-    public ResponseEntity<String> register(@Valid @RequestBody Customer body) {
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody Customer body) {
 
+        Map<String, Object> responseBody = new HashMap<String, Object>();
         String hashedPassword = hash.hashPassword(body.getPassword());
 
         //TODO package_id is missing in voltDB
-        // status in unknown,
-        // customer_id should be auto_increment,
-        // password size should be 60
+        // status in unknown
 
         try {
-            if(voltDB.selectCustomerByMSISDN(body.getMsisdn()).advanceRow()) //check if customer exist
-                return ResponseEntity.badRequest().body("Customer already exists");
+            if(voltDB.selectCustomerByMSISDN(body.getMsisdn()).advanceRow()) { //check if customer exist
+                responseBody.put("message", "Customer with same MSISDN already exists");
+                return ResponseEntity.badRequest().body(responseBody);
+            }
+
 
             int nextId = voltDB.getNextCustomerId();
             System.out.println(nextId);
@@ -71,14 +74,15 @@ public class CustomerController {
         } catch (Exception e) {
 
             System.out.println("failed to insert at voltdb:  " + e);
-            return ResponseEntity.internalServerError().body("failed to insert at voltdb");
-
+            responseBody.put("message", "failed to insert at voltdb");
+            return ResponseEntity.internalServerError().body(responseBody);
         }
 
         //TODO insert to oracledb
         //TODO insert to hazelcast
-
-        return new ResponseEntity<String>("success",HttpStatus.CREATED);
+        responseBody.put("message", "successfully registered");
+        responseBody.put("customer", body);
+        return new ResponseEntity<Map<String, Object>>(responseBody,HttpStatus.CREATED);
     }
 
     @PostMapping(path = "/login",
@@ -110,11 +114,11 @@ public class CustomerController {
         }
         catch(Exception e) {
             System.out.println(e);
-            responseBody.put("error", "failed to connect to voltdb");
+            responseBody.put("message", "voltdb error");
             return ResponseEntity.internalServerError().body(responseBody);
         }
 
-        responseBody.put("error", "Wrong msisdn or password.");
+        responseBody.put("message", "Wrong msisdn or password");
         return ResponseEntity.badRequest().body(responseBody);
     }
 
@@ -123,6 +127,7 @@ public class CustomerController {
     public Map<String, String> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
+        errors.put("message", "validation error");
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
