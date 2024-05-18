@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 public class Customer {
+
     @NotBlank(message = "msisdn is mandatory")
     @Pattern(regexp = "5\\d{9}", message = "Invalid msisdn format")
     private String msisdn;

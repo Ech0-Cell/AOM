@@ -3,19 +3,16 @@ package org.mth3902.aom.controller;
 import jakarta.validation.Valid;
 import org.mth3902.aom.DTO.BalanceTransactionRequest;
 import org.mth3902.aom.model.Balance;
+import org.mth3902.aom.model.Package;
+import org.mth3902.aom.repository.BalanceRepository;
+import org.mth3902.aom.repository.PackageRepository;
 import org.mth3902.aom.service.AuthenticationService;
-import org.mth3902.aom.service.HashService;
-import org.mth3902.aom.voltdb.VoltDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.voltdb.VoltTable;
-import org.voltdb.VoltTableRow;
-import org.voltdb.VoltType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,50 +21,36 @@ import java.util.Map;
 @RequestMapping(path = "api/balance")
 public class BalanceController {
 
-    private VoltDatabase voltDB;
-    private AuthenticationService auth;
+    private final AuthenticationService auth;
+    private final BalanceRepository balanceRepository;
+    private final PackageRepository packageRepository;
 
     @Autowired
-    public BalanceController(Environment env, AuthenticationService auth) {
+    public BalanceController(AuthenticationService auth,
+                             BalanceRepository balanceRepository,
+                             PackageRepository packageRepository) {
+
+        this.packageRepository = packageRepository;
+        this.balanceRepository = balanceRepository;
         this.auth = auth;
-        try {
-            this.voltDB = new VoltDatabase(env.getProperty("voltdb.server.host"));
-        } catch (Exception e) {
-            System.out.println("error in voltdb" + e);
-        }
     }
 
     @GetMapping
-    public ResponseEntity getBalanceByMSISDN(@RequestParam String MSISDN, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Map<String, Object>> getBalanceByMSISDN(@RequestParam String MSISDN, @RequestHeader("Authorization") String token) throws Exception {
 
-        if(!auth.isValidToken(token, MSISDN))
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid token");
+        Map<String, Object> responseBody = new HashMap<String, Object>();
 
-        try {
-            VoltTable table = voltDB.selectBalanceByMSISDN(MSISDN);
-
-            if(table.advanceRow())
-            {
-                VoltTableRow row = table.fetchRow(0);
-
-                Balance balance = new Balance(
-                        row.get("BAL_LVL_DATA", VoltType.INTEGER).toString(),
-                        row.get("BAL_LVL_SMS", VoltType.INTEGER).toString(),
-                        row.get("BAL_LVL_MINUTES", VoltType.INTEGER).toString(),
-                        row.getDecimalAsBigDecimal("BAL_LVL_MONEY"),
-                        row.getTimestampAsLong("EDATE"),
-                        row.getTimestampAsLong("SDATE"),
-                        row.getDecimalAsBigDecimal("PRICE")
-                        );
-
-                return ResponseEntity.ok(balance);
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-            return ResponseEntity.internalServerError().body("failed to select from voltdb");
+        if(!auth.isValidToken(token, MSISDN)) {
+            responseBody.put("message", "invalid token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseBody);
         }
 
-        return ResponseEntity.badRequest().body("no balance is associated with this customer");
+        Balance balance = balanceRepository.getBalanceByMSISDN(MSISDN);
+        Package cellPackage = packageRepository.getPackageById(balance.getPackageId());
+        responseBody.put("balance", balance);
+        responseBody.put("package", cellPackage);
+
+        return ResponseEntity.ok(responseBody);
     }
 
     @ResponseStatus(HttpStatus.CREATED)
@@ -103,6 +86,7 @@ public class BalanceController {
     public Map<String, String> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
+        errors.put("message", "validation error");
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
