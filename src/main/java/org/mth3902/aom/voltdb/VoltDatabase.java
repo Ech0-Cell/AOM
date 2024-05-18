@@ -3,6 +3,8 @@ package org.mth3902.aom.voltdb;
 import org.voltdb.*;
 import org.voltdb.client.*;
 
+import java.time.LocalDateTime;
+
 public class VoltDatabase {
     // VoltDB client instance
     private Client client;
@@ -14,23 +16,27 @@ public class VoltDatabase {
     }
 
     // Method to insert data into PACKAGE table
-    public void insertPackage(int packageId, String packageName, double price, int minutes, int data, int sms, int period) throws Exception {
+    public void insertPackage(long packageId, String packageName, double price, int minutes, int data, int sms, int period) throws Exception {
         client.callProcedure("@AdHoc", "INSERT INTO PACKAGE VALUES (?, ?, ?, ?, ?, ?, ?);", packageId, packageName, price, minutes, data, sms, period);
     }
 
     // Method to insert data into CUSTOMER table
-    public void insertCustomer(int custId, String msisdn, String name, String surname, String email, String password, String status, String securityKey) throws Exception {
+    public void insertCustomer(long custId, String msisdn, String name, String surname, String email, String password, String status, String securityKey) throws Exception {
         client.callProcedure("@AdHoc", "INSERT INTO CUSTOMER VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?);", custId, msisdn, name, surname, email, password, status, securityKey);
     }
 
     // Method to insert data into BALANCE table
-    public void insertBalance(int balanceId, int packageId, int custId, int partitionId, int minutes, int sms, int data, double price, double moneyBalance) throws Exception {
-        client.callProcedure("@AdHoc", "INSERT INTO BALANCE VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, NULL, ?, ?);", balanceId, packageId, custId, partitionId, minutes, sms, data, price, moneyBalance);
+    public void insertBalance(long balanceId, long packageId, long custId, int partitionId, int minutes, int sms, int data, long sdate, long edate, double price, double moneyBalance) throws Exception {
+        client.callProcedure("@AdHoc", "INSERT INTO BALANCE VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", balanceId, packageId, custId, partitionId, minutes, sms, data, sdate, edate, price, moneyBalance);
     }
 
     // Method to select all rows from PACKAGE table
     public VoltTable selectAllPackages() throws Exception {
         return client.callProcedure("@AdHoc", "SELECT * FROM PACKAGE;").getResults()[0];
+    }
+
+    public VoltTable selectPackagesById(long id) throws Exception {
+        return client.callProcedure("@AdHoc", "SELECT * FROM PACKAGE WHERE PACKAGE_ID = ?;", id).getResults()[0];
     }
 
     // Method to select all rows from CUSTOMER table
@@ -53,13 +59,23 @@ public class VoltDatabase {
         return client.callProcedure("@AdHoc", "SELECT b.* FROM BALANCE b JOIN CUSTOMER c ON b.CUST_ID = c.CUST_ID WHERE c.MSISDN = ?;", msisdn).getResults()[0];
     }
 
-    public int getNextCustomerId() throws Exception {
+    public long getNextCustomerId() throws Exception {
 
         VoltTable response = client.callProcedure("@AdHoc","SELECT CUST_ID FROM CUSTOMER ORDER BY CUST_ID DESC LIMIT 1;").getResults()[0];
         if(response.advanceRow())
-            return (int) response.getLong("CUST_ID") + 1;
+            return (long) response.getLong("CUST_ID") + 1;
 
         throw new Exception("error while getting next customer id");
+    }
+
+    // Method to get next balance id
+    public long getNextBalanceId() throws Exception {
+
+        VoltTable response = client.callProcedure("@AdHoc","SELECT BALANCE_ID FROM BALANCE ORDER BY BALANCE_ID DESC LIMIT 1;").getResults()[0];
+        if(response.advanceRow())
+            return (long) response.getLong("BALANCE_ID") + 1;
+
+        throw new Exception("error while getting next balance id");
     }
 
     // Close the VoltDB client connection
