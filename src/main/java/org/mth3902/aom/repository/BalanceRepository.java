@@ -79,7 +79,7 @@ public class BalanceRepository {
             return voltDB.getNextBalanceId();
         } catch (Exception e) {
             System.out.println("voltdb error while getting customer id: " + e);
-            return -1;
+            return 1;
         }
     }
 }
