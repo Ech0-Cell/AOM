@@ -69,14 +69,16 @@ public class CustomerController {
 
         Customer customer = customerRepository.getCustomerByMSISDN(body.get("msisdn"));
 
-        if(hash.checkPassword(body.get("password"), customer.getPassword()))  //check if password is correct
-        {
-            String token = auth.generateToken(customer.getMsisdn());
+        if(customer != null) {
+            if(hash.checkPassword(body.get("password"), customer.getPassword()))  //check if password is correct
+            {
+                String token = auth.generateToken(customer.getMsisdn());
 
-            responseBody.put("token", token);
-            responseBody.put("msisdn", customer.getMsisdn());
+                responseBody.put("token", token);
+                responseBody.put("msisdn", customer.getMsisdn());
 
-            return ResponseEntity.ok(responseBody);
+                return ResponseEntity.ok(responseBody);
+            }
         }
 
         responseBody.put("message", "Wrong msisdn or password");
