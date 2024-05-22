@@ -1,6 +1,7 @@
 package org.mth3902.aom.controller;
 
 import jakarta.validation.Valid;
+import org.mth3902.aom.DTO.RegisterCustomerRequest;
 import org.mth3902.aom.model.Customer;
 import org.mth3902.aom.repository.CustomerRepository;
 import org.mth3902.aom.service.AuthenticationService;
@@ -36,27 +37,27 @@ public class CustomerController {
     @PostMapping(path = "/register",
             consumes = {"application/json"},
             produces = {"application/json"})
-    public ResponseEntity<Map<String, Object>> registerCustomer(@Valid @RequestBody Customer body) throws Exception {
+    public ResponseEntity<Map<String, Object>> registerCustomer(@Valid @RequestBody RegisterCustomerRequest requestBody) throws Exception {
 
         Map<String, Object> responseBody = new HashMap<String, Object>();
-        String hashedPassword = hash.hashPassword(body.getPassword());
 
-
-        if(!customerRepository.existsByMSISDN(body.getMsisdn())) {
-
-            Customer customer = customerRepository.save(body, hashedPassword);
-
-            responseBody.put("message", "successfully registered");
-            responseBody.put("msisdn", customer.getMsisdn());
-            return new ResponseEntity<Map<String, Object>>(responseBody, HttpStatus.CREATED);
-        }
-        else {
+        //checks if customer already exists
+        if(customerRepository.existsByMSISDN(requestBody.getMsisdn())) {
             responseBody.put("message", "Customer with same MSISDN already exists");
             return ResponseEntity.badRequest().body(responseBody);
         }
 
+        //hash the password
+        String hashedPassword = hash.hashPassword(requestBody.getPassword());
+
+        //saves customer to databases
+        RegisterCustomerRequest customer = customerRepository.save(requestBody, hashedPassword);
         //TODO insert to oracledb
         //TODO insert to hazelcast
+
+        responseBody.put("message", "successfully registered");
+        responseBody.put("msisdn", customer.getMsisdn());
+        return new ResponseEntity<Map<String, Object>>(responseBody, HttpStatus.CREATED);
 
     }
 
@@ -66,28 +67,28 @@ public class CustomerController {
     public ResponseEntity<Map<String, String>> loginCustomer(@RequestBody Map<String, String> body) throws Exception {
 
         Map<String, String> responseBody = new HashMap<String, String>();
-
         Customer customer = customerRepository.getCustomerByMSISDN(body.get("msisdn"));
 
-        if(hash.checkPassword(body.get("password"), customer.getPassword()))  //check if password is correct
-        {
-            String token = auth.generateToken(customer.getMsisdn());
+        //checks if msisdn and password are correct
+        if( customer == null || (!hash.checkPassword(body.get("password"), customer.getHashedPassword())) ) {
 
-            responseBody.put("token", token);
-            responseBody.put("msisdn", customer.getMsisdn());
-
-            return ResponseEntity.ok(responseBody);
+                responseBody.put("message", "Wrong msisdn or password");
+                return ResponseEntity.badRequest().body(responseBody);
         }
 
-        responseBody.put("message", "Wrong msisdn or password");
-        return ResponseEntity.badRequest().body(responseBody);
+        //generates token and add to response
+        String token = auth.generateToken(customer.getMsisdn());
+        responseBody.put("token", token);
+        responseBody.put("msisdn", customer.getMsisdn());
+
+        return ResponseEntity.ok(responseBody);
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
 
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> errors = new HashMap<String, String>();
 
         errors.put("message", "validation error");
 
@@ -101,5 +102,4 @@ public class CustomerController {
         return errors;
 
     }
-
 }

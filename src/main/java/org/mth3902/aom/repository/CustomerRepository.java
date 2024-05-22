@@ -1,13 +1,14 @@
 package org.mth3902.aom.repository;
 
+import org.example.VoltDatabase;
+import org.mth3902.aom.DTO.RegisterCustomerRequest;
 import org.mth3902.aom.model.Customer;
-import org.mth3902.aom.voltdb.VoltDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
 import org.voltdb.VoltTable;
 import org.voltdb.VoltTableRow;
+import org.voltdb.VoltType;
 
 @Repository
 public class CustomerRepository {
@@ -27,7 +28,7 @@ public class CustomerRepository {
         }
     }
 
-    public Customer save(Customer customer, String hashedPassword) throws Exception {
+    public RegisterCustomerRequest save(RegisterCustomerRequest customer, String hashedPassword) throws Exception {
 
         long customerId = getNextId();
 
@@ -55,8 +56,8 @@ public class CustomerRepository {
             VoltTableRow row = table.fetchRow(0);
 
             return new Customer(
+                    Long.valueOf( (Integer) row.get("CUST_ID", VoltType.INTEGER)),
                     row.getString("msisdn"),
-                    null, //TODO remove packageID
                     row.getString("name"),
                     row.getString("surname"),
                     row.getString("email"),
@@ -78,7 +79,7 @@ public class CustomerRepository {
             return voltDB.getNextCustomerId();
         } catch (Exception e) {
             System.out.println("voltdb error while getting customer id: " + e);
-            return -1;
+            return 1;
         }
     }
 }

@@ -11,17 +11,8 @@ public class Balance {
     private final long endDate;
     private final long startDate;
     private final BigDecimal price;
-    private long packageId;
+    private final long packageId;
 
-    public Balance(int remData, int remSms, int remMin, double remMoney, Long endDate, Long startDate, BigDecimal price) {
-        this.remData = remData;
-        this.remSms = remSms;
-        this.remMin = remMin;
-        this.remMoney = remMoney;
-        this.endDate = endDate;
-        this.startDate = startDate;
-        this.price = price;
-    }
 
     public Balance(int remData, int remSms, int remMin, double remMoney, Long endDate, Long startDate, BigDecimal price, long packageId) {
         this.remData = remData;
