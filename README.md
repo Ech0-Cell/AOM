@@ -1,7 +1,6 @@
-# AOM
 # Account and Order Management (AOM)
 
-The Account and Order Management (AOM) function serves as the middleware between all frontend applications and the system's databases.
+The Account and Order Management (AOM) function is part of Echo-cell project which is an online charging system prototype built in the scope of Enterprise applicatoin development course, MTH3902, by BAU University students. AOM serves as the middleware function which handles all frontend applications requests and make transactions to system's databases.
 
 ## AOM Features
 
