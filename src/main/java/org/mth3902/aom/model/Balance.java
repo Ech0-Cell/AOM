@@ -10,11 +10,11 @@ public class Balance {
     private final double remMoney;
     private final long endDate;
     private final long startDate;
-    private final BigDecimal price;
+    private final double price;
     private final long packageId;
 
 
-    public Balance(int remData, int remSms, int remMin, double remMoney, Long endDate, Long startDate, BigDecimal price, long packageId) {
+    public Balance(int remData, int remSms, int remMin, double remMoney, Long endDate, Long startDate, double price, long packageId) {
         this.remData = remData;
         this.remSms = remSms;
         this.remMin = remMin;
@@ -53,7 +53,7 @@ public class Balance {
         return startDate;
     }
 
-    public BigDecimal getPrice() {
+    public double getPrice() {
         return price;
     }
 

@@ -3,6 +3,7 @@ package org.mth3902.aom.controller;
 import jakarta.validation.Valid;
 import org.mth3902.aom.DTO.RegisterCustomerRequest;
 import org.mth3902.aom.model.Customer;
+import org.mth3902.aom.repository.BalanceRepository;
 import org.mth3902.aom.repository.CustomerRepository;
 import org.mth3902.aom.service.AuthenticationService;
 import org.mth3902.aom.service.HashService;
@@ -22,13 +23,16 @@ public class CustomerController {
     private final AuthenticationService auth;
     private final HashService hash;
     private final CustomerRepository customerRepository;
+    private final BalanceRepository balanceRepository;
 
     @Autowired
     public CustomerController(AuthenticationService auth,
                               HashService hash,
-                              CustomerRepository customerRepository) {
+                              CustomerRepository customerRepository,
+                              BalanceRepository balanceRepository) {
 
         this.customerRepository = customerRepository;
+        this.balanceRepository = balanceRepository;
         this.auth = auth;
         this.hash = hash;
     }
@@ -47,16 +51,18 @@ public class CustomerController {
             return ResponseEntity.badRequest().body(responseBody);
         }
 
-        //hash the password
         String hashedPassword = hash.hashPassword(requestBody.getPassword());
+        long customerId = customerRepository.getNextId();
 
-        //saves customer to databases
-        RegisterCustomerRequest customer = customerRepository.save(requestBody, hashedPassword);
-        //TODO insert to oracledb
-        //TODO insert to hazelcast
+        //insert customer and its balance to voltDB
+        customerRepository.save(requestBody, customerId, hashedPassword);
+        balanceRepository.save(customerId, requestBody.getPackageID());
+
+        //insert customer and its balance to oracleDB
+
 
         responseBody.put("message", "successfully registered");
-        responseBody.put("msisdn", customer.getMsisdn());
+        responseBody.put("msisdn", requestBody.getMsisdn());
         return new ResponseEntity<Map<String, Object>>(responseBody, HttpStatus.CREATED);
 
     }
