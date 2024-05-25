@@ -2,20 +2,26 @@ package org.mth3902.aom.repository;
 
 import org.example.VoltDatabase;
 import org.mth3902.aom.model.Package;
+import org.mth3902.aom.rowMapper.PackageMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.voltdb.VoltTable;
 import org.voltdb.VoltTableRow;
 import org.voltdb.VoltType;
 import java.util.ArrayList;
+import java.util.List;
 
 @Repository
 public class PackageRepository {
     private VoltDatabase voltDB;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public PackageRepository(Environment env) {
+    public PackageRepository(Environment env, JdbcTemplate jdbcTemplate) {
+
+        this.jdbcTemplate = jdbcTemplate;
 
         try {
             this.voltDB = new VoltDatabase(env.getProperty("voltdb.server.host"));
@@ -42,6 +48,13 @@ public class PackageRepository {
             );
         }
         return null;
+    }
+
+    public Package getPackageByIdOracle(long id) {
+
+        String sql = "CALL select_package_by_id(?)";
+
+        return jdbcTemplate.queryForObject(sql, new PackageMapper(), id);
     }
 
     public ArrayList<Package> getAllPackages() throws Exception {
@@ -71,5 +84,11 @@ public class PackageRepository {
         return packageList;
     }
 
+    //TODO cast List to ArrayList
+    public List<Package> getAllPackagesOracle(long id) {
 
+        String sql = "CALL select_all_packages()";
+
+        return jdbcTemplate.query(sql, new PackageMapper());
+    }
 }

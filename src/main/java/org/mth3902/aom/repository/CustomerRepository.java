@@ -3,8 +3,10 @@ package org.mth3902.aom.repository;
 import org.example.VoltDatabase;
 import org.mth3902.aom.DTO.RegisterCustomerRequest;
 import org.mth3902.aom.model.Customer;
+import org.mth3902.aom.rowMapper.CustomerMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.voltdb.VoltTable;
 import org.voltdb.VoltTableRow;
@@ -14,12 +16,12 @@ import org.voltdb.VoltType;
 public class CustomerRepository {
 
     private VoltDatabase voltDB;
-    private BalanceRepository balanceRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public CustomerRepository(Environment env, BalanceRepository balanceRepository) {
+    public CustomerRepository(Environment env, JdbcTemplate jdbcTemplate) {
 
-        this.balanceRepository = balanceRepository;
+        this.jdbcTemplate = jdbcTemplate;
 
         try {
             this.voltDB = new VoltDatabase(env.getProperty("voltdb.server.host"));
@@ -28,12 +30,9 @@ public class CustomerRepository {
         }
     }
 
-    public RegisterCustomerRequest save(RegisterCustomerRequest customer, String hashedPassword) throws Exception {
+    public void save(RegisterCustomerRequest customer, Long customerId, String hashedPassword) throws Exception {
 
-        long customerId = getNextId();
-
-        balanceRepository.save(customerId, customer.getPackageID());
-
+        //insert at voltdb
         voltDB.insertCustomer(customerId,
                 customer.getMsisdn(),
                 customer.getName(),
@@ -43,7 +42,18 @@ public class CustomerRepository {
                 "1",
                 customer.getSecurityKey());
 
-        return customer;
+        //insert at oracle
+//        String sql = "CALL insert_customer(?, ?, ?, ?, ?, ?, ?, ?)";
+//        jdbcTemplate.update(sql,
+//                customerId,
+//                customer.getMsisdn(),
+//                customer.getName(),
+//                customer.getSurname(),
+//                customer.getEmail(),
+//                hashedPassword,
+//                "1", //status
+//                customer.getSecurityKey());
+
     }
 
     public Customer getCustomerByMSISDN(String MSISDN) throws Exception {
@@ -69,12 +79,24 @@ public class CustomerRepository {
 
     }
 
+    public Customer getCustomerByMSISDNOracle(String MSISDN) {
+
+        String sql = "CALL select_customer_by_msisdn(?)";
+
+        return jdbcTemplate.queryForObject(sql, new CustomerMapper(), MSISDN);
+    }
+
     public boolean existsByMSISDN(String MSISDN) throws Exception {
 
         return getCustomerByMSISDN(MSISDN) != null;
     }
 
-    private long getNextId() {
+    public boolean existsByMSISDNOracle(String MSISDN) throws Exception {
+
+        return getCustomerByMSISDNOracle(MSISDN) != null;
+    }
+
+    public long getNextId() {
         try {
             return voltDB.getNextCustomerId();
         } catch (Exception e) {
